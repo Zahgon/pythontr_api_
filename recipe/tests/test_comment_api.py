@@ -1,13 +1,13 @@
-from django.urls import reverse
-from django.test import TestCase
-from django.contrib.contenttypes.models import ContentType
+from app.urls import reverse
+from app.testing import TestCase
+from core.models import ContentType, content_type_id_for
 
-from rest_framework import status
-from rest_framework.test import APIClient
+from starlette import status
+from app.testing import APIClient
 
 from core.models import Article
 from core.models import Comment
-from django.contrib.auth import get_user_model
+from app.testing import get_user_model
 
 COMMENT_URL = reverse('recipe:comment-list')
 
@@ -29,7 +29,8 @@ class PublicCommentApiTest(TestCase):
             content='bla bla....bla......',
             is_active=True,
         )
-        content_type = ContentType.objects.get_for_model(Article)
+        content_type = ContentType.objects.get(
+            id=content_type_id_for('article'))
         content = {
             'content_type': content_type.id,
             'object_id': article.id,
@@ -70,12 +71,12 @@ class PrivateCommentApiTest(TestCase):
             "name": "TEST",
             "ip": "127.0.0.1",
             "user": [self.user.id],
-            "content_type": ContentType.objects.get_for_model(Article).id,
+            "content_type": content_type_id_for('article'),
             "object_id": article.id,
             "comments": [],
         }
         res = self.client.post(COMMENT_URL, content)
-        self.assertEquals(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
     def test_update_article_comment(self):
         self.is_staff = True
@@ -92,7 +93,8 @@ class PrivateCommentApiTest(TestCase):
             email='test12@hotmail.com',
             name='TEST',
             ip='127.0.0.1',
-            content_type=ContentType.objects.get_for_model(Article),
+            content_type=ContentType.objects.get(
+                id=content_type_id_for('article')),
             object_id=article.id,
             is_active=True,
             user=self.user
@@ -106,8 +108,8 @@ class PrivateCommentApiTest(TestCase):
         # &parent_id=<geçerli_parent_id> parentı varsa
 
         res = self.client.patch(url, content)
-        self.assertEquals(res.status_code, status.HTTP_200_OK)
-        self.assertEquals(res.data['content'], content['content'])
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['content'], content['content'])
 
     def test_update_comment_comment(self):
         self.is_staff = True
@@ -124,7 +126,8 @@ class PrivateCommentApiTest(TestCase):
             email='test12@hotmail.com',
             name='TEST Parent',
             ip='127.0.0.1',
-            content_type=ContentType.objects.get_for_model(Article),
+            content_type=ContentType.objects.get(
+                id=content_type_id_for('article')),
             object_id=article.id,
             is_active=True,
             user=self.user
@@ -135,7 +138,8 @@ class PrivateCommentApiTest(TestCase):
             email='test12@hotmail.com',
             name='TEST Child',
             ip='127.0.0.1',
-            content_type=ContentType.objects.get_for_model(Comment),
+            content_type=ContentType.objects.get(
+                id=content_type_id_for('comment')),
             object_id=parent_comment.id,
             is_active=True,
             user=self.user
@@ -149,5 +153,5 @@ class PrivateCommentApiTest(TestCase):
         # &parent_id=<geçerli_parent_id> parentı varsa
 
         res = self.client.patch(url, content)
-        self.assertEquals(res.status_code, status.HTTP_200_OK)
-        self.assertEquals(res.data['content'], content['content'])
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['content'], content['content'])

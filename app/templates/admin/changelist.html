@@ -1,0 +1,32 @@
+<div id="content-main">
+  <div class="changelist-form-container">
+    <div class="module$filtered" id="changelist">
+      <div id="toolbar">
+        <form id="changelist-search" method="get">
+          <div>
+            <label for="searchbar"><img src="/static/admin/img/search.svg" alt="Ara"></label>
+            <input type="text" size="40" name="q" value="$query" id="searchbar" autofocus>
+            <input type="submit" value="Ara">
+            <span class="small quiet">$result_count sonuç</span>
+          </div>
+        </form>
+      </div>
+      <form id="changelist-form" method="post"><input type="hidden" name="csrfmiddlewaretoken" value="$csrf_token">
+        <div class="results">
+          <table id="result_list">
+            <thead>
+              <tr>
+$headers
+              </tr>
+            </thead>
+            <tbody>
+$rows
+            </tbody>
+          </table>
+        </div>
+        <p class="paginator">$result_count $verbose_name_plural</p>
+      </form>
+    </div>
+$filters
+  </div>
+</div>

@@ -1,30 +1,37 @@
+"""Mail backend that tolerates hosts presenting an untrusted certificate.
+
+Ported verbatim from the baseline: the permissive SSL context (hostname
+checking off, certificate verification off) is part of the deployed
+behaviour and is reproduced rather than fixed.
+"""
+
+from __future__ import annotations
+
+import smtplib
 import ssl
-from django.core.mail.backends.smtp import EmailBackend
+
+from app.mail.backends.smtp import EmailBackend
 
 
 class CustomEmailBackend(EmailBackend):
+    """SMTP backend whose TLS handshake skips certificate validation."""
+
     def open(self):
-        """
-        Override to customize the SSL context and open the connection.
-        """
         if self.connection:
-            return self.connection
-
-        # Custom SSL context
-        self.ssl_context = ssl.create_default_context()
-        self.ssl_context.check_hostname = False
-        self.ssl_context.verify_mode = ssl.CERT_NONE
-
+            return False
         try:
-            self.connection = self.connection_class(
-                self.host, self.port, timeout=self.timeout
-            )
+            self.connection = smtplib.SMTP(self.host, self.port, timeout=10)
+            self.connection.ehlo()
             if self.use_tls:
-                self.connection.starttls(context=self.ssl_context)
+                context = ssl.create_default_context()
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+                self.connection.starttls(context=context)
+                self.connection.ehlo()
             if self.username and self.password:
                 self.connection.login(self.username, self.password)
             return True
-        except Exception as e:
-            if self.fail_silently:
-                return False
-            raise e
+        except Exception:
+            if not self.fail_silently:
+                raise
+            return False

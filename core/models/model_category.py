@@ -1,65 +1,104 @@
-from django.db import models
+"""Article categories, arranged as a self-referencing tree."""
+from __future__ import annotations
 
-from django.conf import settings
+import datetime as _datetime
+from typing import List, Optional
 
-from django.utils import timezone
-from django.utils.text import slugify
+from sqlalchemy import DateTime, ForeignKey, SmallInteger, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db import BIG_PK, Base
+from app.text import slugify
+from core.models.manager import Manager, MultipleObjectsReturned, ObjectDoesNotExist
+from core.models.model_support import utcnow
 
 
-class Category(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now_add=True)
-    name = models.CharField(max_length=255, unique=True)
-    title = models.CharField(max_length=255, unique=True)
-    title_h1 = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-    content = models.TextField(blank=True, null=True)
-    short_name = models.CharField(max_length=100, unique=True)
-    parent_category = models.ForeignKey(
-        'self', on_delete=models.SET_NULL,
-        null=True, blank=True
+class Category(Base):
+    __tablename__ = 'core_category'
+
+    DoesNotExist = type('DoesNotExist', (ObjectDoesNotExist,), {})
+    MultipleObjectsReturned = type('MultipleObjectsReturned', (MultipleObjectsReturned,), {})
+    objects = Manager()
+
+    id: Mapped[int] = mapped_column(BIG_PK, primary_key=True, autoincrement=True)
+    created_at: Mapped[_datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
     )
-    slug = models.SlugField(unique=True, max_length=150, editable=False)
-    sort = models.SmallIntegerField(default=0, null=True)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True
+    updated_at: Mapped[_datetime.datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, default='')
+    title: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, default='')
+    title_h1: Mapped[str] = mapped_column(String(255), nullable=False, default='')
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    short_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, default='')
+    slug: Mapped[str] = mapped_column(String(150), nullable=False, unique=True, default='')
+    sort: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True, default=0)
+    parent_category_id: Mapped[Optional[int]] = mapped_column(
+        BIG_PK, ForeignKey('core_category.id', ondelete='SET NULL'), nullable=True
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        BIG_PK, ForeignKey('core_user.id', ondelete='SET NULL'), nullable=True
     )
 
-    def get_slug(self):
-        slug = slugify(self.name.replace('ı', 'i'))
-        unique = slug
-        number = 1
-
-        while Category.objects.filter(slug=unique).exists():
-            unique = '{}-{}'.format(slug, number)
-            number += 1
-
-        return unique
-
-    def save(self, *args, **kwargs):
-        if not self.title_h1:
-            self.title_h1 = self.title
-
-        self.updated_at = timezone.now()
-        self.slug = self.get_slug()
-
-        return super(Category, self).save(*args, **kwargs)
+    parent_category: Mapped[Optional['Category']] = relationship(
+        'Category', remote_side='Category.id', back_populates='category_set', lazy='joined',
+        join_depth=4,
+    )
+    category_set: Mapped[List['Category']] = relationship(
+        'Category', back_populates='parent_category', lazy='selectin',
+    )
+    user = relationship('User', lazy='joined')
 
     @property
-    def full_category_name(self):
-        return self.__str__()
+    def pk(self):
+        return self.id
 
-    def __unicode__(self):
-        return self.name
+    def get_slug(self, session=None):
+        from app import db as _db
 
-    def __str__(self):
-        full_path = [self.name]
-        k = self.parent_category
-        while k is not None:
-            full_path.append(k.name)
-            k = k.parent_category
+        session = session or _db.get_session()
+        slug = slugify(str(self.name).replace('ı', 'i'))
+        base_slug = slug
+        counter = 1
+        while (
+            session.query(Category)
+            .filter(Category.slug == slug)
+            .first()
+            is not None
+        ):
+            slug = '{}-{}'.format(base_slug, counter)
+            counter += 1
+        return slug
 
-        full_path = ' / '.join(full_path[::-1])
+    def save(self, session=None):
+        from app import db as _db
 
-        return full_path
+        session = session or _db.get_session()
+        if not self.title_h1:
+            self.title_h1 = self.title
+        if self.created_at is None:
+            self.created_at = utcnow()
+        self.updated_at = utcnow()
+        self.slug = self.get_slug(session=session)
+        session.add(self)
+        session.flush()
+        return self
+
+    @property
+    def full_category_name(self) -> str:
+        names = []
+        node = self
+        seen = set()
+        while node is not None and id(node) not in seen:
+            seen.add(id(node))
+            names.append(node.name)
+            node = node.parent_category
+        return ' / '.join(reversed(names))
+
+    def __str__(self) -> str:
+        return self.full_category_name
+
+    def __unicode__(self) -> str:
+        return self.full_category_name

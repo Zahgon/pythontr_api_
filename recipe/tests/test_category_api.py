@@ -1,13 +1,15 @@
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from django.test import TestCase
+from app.testing import get_user_model
+from app.urls import reverse
+from app.testing import TestCase
 
-from rest_framework import status
-from rest_framework.test import APIClient
+from starlette import status
+from app.testing import APIClient
 
 from core.models import Category
 
-from recipe.serializers import CategorySerializer
+from recipe.schemas import serialize_category
+
+from types import SimpleNamespace
 
 
 CATEGORIES_URL = reverse('recipe:category-list')
@@ -47,8 +49,9 @@ class PrivateCategoryApiTests(TestCase):
 
         res = self.client.get(CATEGORIES_URL)
 
-        categories = Category.objects.all().order_by('name')
-        serializer = CategorySerializer(categories, many=True)
+        categories = Category.objects.all().order_by(Category.name)
+        serializer = SimpleNamespace(
+            data=[serialize_category(item) for item in categories])
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data), len(serializer.data))
 

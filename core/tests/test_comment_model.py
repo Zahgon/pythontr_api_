@@ -1,7 +1,7 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
+from app.testing import TestCase
+from app.testing import get_user_model
 
-from core.models import Category, Article, Comment
+from core.models import Category, Article, Comment, content_type_id_for
 
 
 def test_user(email='test@hotmail.com', password='123qwe'):
@@ -26,10 +26,11 @@ class ModelTests(TestCase):
             title='Sqrt fonksiyonu  pythontr.com',
             description='bla bla....',
         )
-        article.categories.add(category)
+        article.categories.append(category)
 
         comment = Comment.objects.create(
-            content_object=article,
+            content_type_id=content_type_id_for('article'),
+            object_id=article.id,
             content='Bla bla',
             email='huseyin@pythontr.com',
         )
@@ -44,16 +45,18 @@ class ModelTests(TestCase):
             title='Sqrt fonksiyonu  pythontr.com',
             description='bla bla....',
         )
-        article.categories.add(category)
+        article.categories.append(category)
 
         comment = Comment.objects.create(
-            content_object=article,
+            content_type_id=content_type_id_for('article'),
+            object_id=article.id,
             content='It is wonderful content',
             email='huseyin@pythontr.com',
         )
 
         comment_reply = Comment.objects.create(
-            content_object=comment,
+            content_type_id=content_type_id_for('comment'),
+            object_id=comment.id,
             content='I am not thinking.....',
             email='huseyin@pythontr.com',
         )

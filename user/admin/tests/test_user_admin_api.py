@@ -1,8 +1,8 @@
-from django.test import TestCase
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
-from django.contrib.auth import get_user_model
+from app.testing import TestCase
+from app.urls import reverse
+from starlette import status
+from app.testing import APIClient
+from app.testing import get_user_model
 
 
 class UserAdminAPITests(TestCase):
@@ -63,7 +63,7 @@ class UserAdminAPITests(TestCase):
         res = self.client.patch(url, payload)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.regular_user.refresh_from_db()
+        self.session.refresh(self.regular_user)
         self.assertEqual(self.regular_user.name, payload['name'])
 
     def test_delete_user(self):

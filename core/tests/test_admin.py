@@ -1,6 +1,6 @@
-from django.test import TestCase, Client
-from django.contrib.auth import get_user_model
-from django.urls import reverse
+from app.testing import TestCase, Client
+from app.testing import get_user_model
+from app.urls import reverse
 
 
 class AdminSiteTests(TestCase):

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo "Running pre-commit hook"
-./scripts/run-django-tests.sh
+./scripts/run-tests.sh
 
 # $? son komut sonlanma degerini saklar
 if [ $? -ne 0 ]; then

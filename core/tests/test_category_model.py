@@ -1,6 +1,6 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.db.utils import IntegrityError
+from app.testing import TestCase
+from app.testing import get_user_model
+from sqlalchemy.exc import IntegrityError
 
 from core import models
 

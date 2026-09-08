@@ -1,9 +1,9 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.urls import reverse
+from app.testing import TestCase
+from app.testing import get_user_model
+from app.urls import reverse
 
-from rest_framework.test import APIClient
-from rest_framework import status
+from app.testing import APIClient
+from starlette import status
 
 
 CREATE_USER_URL = reverse('user:create')
@@ -117,7 +117,7 @@ class PrivateUserApiTests(TestCase):
 
         res = self.client.patch(ME_URL, payload)
 
-        self.user.refresh_from_db()
+        self.session.refresh(self.user)
         self.assertEqual(self.user.name, payload['name'])
         self.assertTrue(self.user.check_password(payload['password']))
         self.assertEqual(res.status_code, status.HTTP_200_OK)

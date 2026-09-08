@@ -1,6 +1,6 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from django.db.models import Q
+from app.testing import TestCase
+from app.testing import get_user_model
+from sqlalchemy import or_
 
 from core.models import Message
 
@@ -38,13 +38,13 @@ class ModelTests(TestCase):
         message.is_delete = True
         message.save()
 
-        filter_message = Message.objects.filter(id=message.id).last()
+        filter_message = Message.objects.filter(id=message.id).first()
         self.assertEqual(filter_message, None)
 
         message.is_delete = False
         message.save()
 
-        filter_second_message = Message.objects.filter(id=message.id).last()
+        filter_second_message = Message.objects.filter(id=message.id).first()
         self.assertEqual(filter_second_message.is_delete, False)
 
     def test_get_user_inbox_and_autbox(self):
@@ -80,8 +80,8 @@ class ModelTests(TestCase):
         )
 
         messages = Message.objects.filter(
-            Q(user=user) | Q(sender=user)
-        ).order_by('id')
+            or_(Message.user_id == user.id, Message.sender_id == user.id)
+        ).order_by(Message.id)
         self.assertEqual(messages.count(), 4)
 
     def test_get_user_inbox(self):
@@ -117,7 +117,7 @@ class ModelTests(TestCase):
             content='....sure...',
             ip='127.0.0.1',
         )
-        messages = Message.objects.filter(user=user).order_by('id')
+        messages = Message.objects.filter(user=user).order_by(Message.id)
         self.assertEqual(messages.count(), 1)
 
     def test_get_user_outbox(self):
@@ -153,5 +153,5 @@ class ModelTests(TestCase):
             content='....sure...',
             ip='127.0.0.1',
         )
-        messages = Message.objects.filter(sender=user).order_by('id')
+        messages = Message.objects.filter(sender=user).order_by(Message.id)
         self.assertEqual(messages.count(), 2)

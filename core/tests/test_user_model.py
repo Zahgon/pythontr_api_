@@ -1,5 +1,5 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
+from app.testing import TestCase
+from app.testing import get_user_model
 
 
 class ModelTests(TestCase):

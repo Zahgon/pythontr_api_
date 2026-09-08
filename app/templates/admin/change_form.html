@@ -1,0 +1,14 @@
+<div id="content-main">
+$errornote
+  <form action="$action" method="post" id="$form_id" novalidate><input type="hidden" name="csrfmiddlewaretoken" value="$csrf_token">
+    <div>
+      <fieldset class="module aligned">
+        <h2>$verbose_name</h2>
+$rows
+      </fieldset>
+      <div class="submit-row">
+        <input type="submit" value="Kaydet" class="default" name="_save">
+      </div>
+    </div>
+  </form>
+</div>
